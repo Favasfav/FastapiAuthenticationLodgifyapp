@@ -33,7 +33,7 @@ app.add_middleware(
 
 
 
-
+# serves as a dependency that provides a SQLAlchemy database session 
 def get_db():
     db = database.SessionLocal()
     try:
@@ -41,6 +41,8 @@ def get_db():
     finally:
         db.close()
 
+
+#for checking database connection
 @app.get("/healthcheck")
 async def healthcheck(db: Session = Depends(get_db)):
     try:
@@ -50,7 +52,11 @@ async def healthcheck(db: Session = Depends(get_db)):
         return {"status": "Database connection successful", "users": users_list}
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
+    
 
+
+
+# for sign up
 @app.post("/signup", response_model=schemas.User, status_code=201)
 def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_email(db, email=user.email)
@@ -58,7 +64,7 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     return crud.create_user(db=db, user=user)
 
-
+# get any user by id 
 @app.get("/users/me", response_model=schemas.User)
 async def read_users_me(id:int ,db: Session = Depends(get_db)):
     user=crud.get_user_by_id(db,id=id)
@@ -67,7 +73,7 @@ async def read_users_me(id:int ,db: Session = Depends(get_db)):
     return user
 
 
-
+# login or get token
 @app.post("/login",tags=['Login'])
 def login_for_access(request:schemas.Login,db:Session=Depends(get_db)):
     user=crud.get_user_by_email(db,email=request.email)
@@ -88,5 +94,3 @@ def login_for_access(request:schemas.Login,db:Session=Depends(get_db)):
     return {"access":access_token, "token_type":"bearer"}
    
     
-# if __name__ == '__main__':
-#     uvicorn.run(app, host ="0.0.0.0",port=30000)
